@@ -31,9 +31,44 @@ export default function NouveauRepas() {
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  function onFile(f: File | null) {
+  /** Réduit la photo côté téléphone (max 1600 px, JPEG qualité 0.8) :
+   *  envoi plus rapide, stockage léger, et sous la limite de l'API vision.
+   *  En cas d'échec (format exotique), on garde le fichier original. */
+  async function compress(f: File): Promise<File> {
+    try {
+      const url = URL.createObjectURL(f);
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = url;
+      });
+      const maxDim = 1600;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.8)
+      );
+      if (!blob) return f;
+      return new File([blob], "repas.jpg", { type: "image/jpeg" });
+    } catch {
+      return f;
+    }
+  }
+
+  async function onFile(raw: File | null) {
+    if (!raw) {
+      setFile(null);
+      setPreview(null);
+      return;
+    }
+    const f = raw.size > 500 * 1024 ? await compress(raw) : raw;
     setFile(f);
-    setPreview(f ? URL.createObjectURL(f) : null);
+    setPreview(URL.createObjectURL(f));
   }
 
   async function submit(e: React.FormEvent) {
@@ -116,13 +151,13 @@ export default function NouveauRepas() {
           />
         ) : (
           <span className="text-sm text-muted">
-            📷 Appuie ici pour prendre la photo de l&apos;assiette
+            📷 Appuie ici : prends la photo de l&apos;assiette, ou choisis-la
+            dans ta pellicule
           </span>
         )}
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={(e) => onFile(e.target.files?.[0] ?? null)}
         />
