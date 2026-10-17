@@ -1,0 +1,30 @@
+{
+  "_commentaire": "Gabarit du format d'import (Réglages > Importer). Le vrai fichier, connaissance-initiale.json, contient des données personnelles et n'est JAMAIS commité (voir .gitignore et DECISIONS.md n°2).",
+  "pages": [
+    {
+      "slug": "profil",
+      "title": "Profil",
+      "content_md": "## Identité\n- Prénom, âge, taille, poids, contexte de vie.\n## Historique de poids\n- Repères datés.\n## Sports\n- Pratiques, préférences, matériel."
+    },
+    {
+      "slug": "objectifs",
+      "title": "Objectifs et priorités",
+      "content_md": "1. Priorité n°1\n2. Priorité n°2\n- Échéances datées."
+    },
+    {
+      "slug": "positions",
+      "title": "Mes positions",
+      "content_md": "- Ce que j'accepte, ce que je refuse, et pourquoi."
+    },
+    {
+      "slug": "regime",
+      "title": "Régime et habitudes",
+      "content_md": "- Structure des repas, décisions actives."
+    },
+    {
+      "slug": "sante",
+      "title": "Santé",
+      "content_md": "- Contexte médical utile au coach (ce fichier reste hors Git)."
+    }
+  ]
+}
