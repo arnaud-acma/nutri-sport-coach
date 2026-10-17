@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f4ef;
+  --foreground: #1c1b18;
+  --card: #ffffff;
+  --muted: #6e6a60;
+  --accent: #1f6f43;
+  --accent-soft: #e4f0e8;
+  --danger: #a33c2e;
+  --border: #e2ded4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-border: var(--border);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #121210;
+    --foreground: #ece9e2;
+    --card: #1c1b18;
+    --muted: #a09a8c;
+    --accent: #6fbf8f;
+    --accent-soft: #1d2b22;
+    --danger: #d98477;
+    --border: #2b2a25;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Zone sûre iPhone (encoche + barre) */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+
+/* Rendu simple du Markdown du coach */
+.prose-coach p { margin: 0.4rem 0; }
+.prose-coach strong { font-weight: 600; }
+.prose-coach ul { list-style: disc; padding-left: 1.2rem; margin: 0.4rem 0; }
+.prose-coach h1, .prose-coach h2, .prose-coach h3 {
+  font-weight: 600; margin: 0.8rem 0 0.3rem;
+}
