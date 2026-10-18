@@ -1,14 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cleanEnv } from "@/lib/env";
 
 /** Client lié à la session de l'utilisateur (cookies). À utiliser dans les
  *  Server Components et les routes API pour tout ce qui est soumis au RLS. */
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
     {
       cookies: {
         getAll() {
@@ -32,15 +33,15 @@ export async function createClient() {
  *  Utilisé pour le Storage (upload + URL signées). */
 export function createServiceClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)!,
+    cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY)!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }
 
 export function isConfigured(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   );
 }

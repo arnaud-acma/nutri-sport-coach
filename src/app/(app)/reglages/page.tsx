@@ -1,13 +1,14 @@
 import { requireUser } from "@/lib/auth";
 import ImportKnowledge from "./ImportKnowledge";
+import { cleanEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 export default async function Reglages() {
   const user = await requireUser();
-  const provider = (process.env.LLM_PROVIDER ?? "anthropic").toLowerCase();
-  const hasKey = Boolean(process.env.ANTHROPIC_API_KEY);
-  const model = process.env.LLM_MODEL || "claude-sonnet-5-5";
+  const provider = (cleanEnv(process.env.LLM_PROVIDER) ?? "anthropic").toLowerCase();
+  const hasKey = Boolean(cleanEnv(process.env.ANTHROPIC_API_KEY));
+  const model = cleanEnv(process.env.LLM_MODEL) || "claude-sonnet-5-5";
   const effective = provider === "mock" || !hasKey ? "mock (simulé)" : provider;
 
   return (
