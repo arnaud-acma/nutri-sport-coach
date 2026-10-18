@@ -38,7 +38,7 @@ export class AnthropicProvider implements LlmProvider {
       text: [
         input.mealType ? `Type de repas : ${input.mealType}.` : "",
         input.note ? `Note d'Arnaud : ${input.note}` : "",
-        "Analyse ce repas et réponds UNIQUEMENT avec le JSON demandé.",
+        "Analyse ce repas puis appelle l'outil verdict_repas avec ton analyse (ne réponds pas en texte libre).",
       ]
         .filter(Boolean)
         .join("\n"),
@@ -53,13 +53,16 @@ export class AnthropicProvider implements LlmProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 2048,
+        max_tokens: 4096,
         system: input.systemPrompt,
         messages: [{ role: "user", content }],
-        // Sortie structurée forcée : le modèle remplit les champs d'un outil
-        // au lieu d'écrire du JSON à la main (plus de JSON tronqué ou mal formé).
+        // Sortie structurée : le modèle remplit les champs d'un outil au lieu
+        // d'écrire du JSON à la main. tool_choice "tool"/"any" est refusé par
+        // certains modèles (erreur 400 constatée le 18/10 avec Sonnet 5.5) :
+        // on reste en "auto" et la consigne demande d'appeler l'outil.
+        // Repli sur la lecture du texte si le modèle répond quand même en texte.
         tools: [COACH_TOOL],
-        tool_choice: { type: "tool", name: COACH_TOOL.name },
+        tool_choice: { type: "auto" },
       }),
     });
 
