@@ -38,3 +38,5 @@ Tests rapides sans aucune clé : `LLM_PROVIDER=mock` (réponses simulées).
 npm run build   # vérification complète types + build
 node scripts/test-llm.mjs   # tests de l'adaptateur LLM (mock + parseur)
 ```
+
+Premier déploiement
