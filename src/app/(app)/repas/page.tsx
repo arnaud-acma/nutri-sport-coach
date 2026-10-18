@@ -1,24 +1,9 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import Markdown from "@/components/Markdown";
+import MealCard, { type MealRow } from "@/components/MealCard";
 
 export const dynamic = "force-dynamic";
-
-interface StoredFeedback {
-  resume?: string;
-  ajouts?: string[];
-  commentaire?: string;
-}
-
-function parseFeedback(raw: string | null): StoredFeedback {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as StoredFeedback;
-  } catch {
-    return { commentaire: raw };
-  }
-}
 
 export default async function Repas() {
   await requireUser();
@@ -27,7 +12,8 @@ export default async function Repas() {
     .from("meals")
     .select("id,eaten_at,meal_type,note,photo_path,coach_verdict,coach_feedback_md,model_used")
     .order("eaten_at", { ascending: false })
-    .limit(30);
+    .limit(30)
+    .returns<MealRow[]>();
 
   // URL signées pour les photos (bucket privé)
   const service = createServiceClient();
@@ -41,6 +27,19 @@ export default async function Repas() {
       .createSignedUrls(paths, 3600);
     signed?.forEach((s) => {
       if (s.signedUrl && s.path) photoUrls.set(s.path, s.signedUrl);
+    });
+  }
+
+  // Nombre de messages échangés par repas (table absente avant la
+  // migration 0002 : on ignore simplement l'erreur).
+  const counts = new Map<string, number>();
+  if (meals?.length) {
+    const { data: msgs } = await supabase
+      .from("coach_messages")
+      .select("meal_id")
+      .in("meal_id", meals.map((m) => m.id));
+    msgs?.forEach((r) => {
+      if (r.meal_id) counts.set(r.meal_id, (counts.get(r.meal_id) ?? 0) + 1);
     });
   }
 
@@ -61,45 +60,21 @@ export default async function Repas() {
       )}
 
       {meals?.map((m) => {
-        const fb = parseFeedback(m.coach_feedback_md);
-        const url = m.photo_path ? photoUrls.get(m.photo_path) : null;
+        const n = counts.get(m.id) ?? 0;
         return (
-          <article
+          <MealCard
             key={m.id}
-            id={m.id}
-            className="rounded-xl border border-border bg-card overflow-hidden"
-          >
-            {url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={url} alt="" className="w-full max-h-64 object-cover" />
-            )}
-            <div className="p-4 flex flex-col gap-2">
-              <p className="text-sm font-semibold">
-                {m.coach_verdict === "valide"
-                  ? "✅"
-                  : m.coach_verdict === "simule"
-                    ? "🧪"
-                    : "➕"}{" "}
-                {m.meal_type ?? "Repas"} ·{" "}
-                {new Date(m.eaten_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris",
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-              {m.note && <p className="text-sm text-muted">« {m.note} »</p>}
-              {fb.resume && <p className="text-sm">{fb.resume}</p>}
-              {fb.ajouts && fb.ajouts.length > 0 && (
-                <ul className="list-disc pl-5 text-sm">
-                  {fb.ajouts.map((a, i) => (
-                    <li key={i}>{a}</li>
-                  ))}
-                </ul>
-              )}
-              {fb.commentaire && <Markdown md={fb.commentaire} />}
-            </div>
-          </article>
+            meal={m}
+            photoUrl={m.photo_path ? (photoUrls.get(m.photo_path) ?? null) : null}
+            footer={
+              <Link
+                href={`/repas/${m.id}`}
+                className="mt-1 self-start text-sm font-semibold text-accent underline"
+              >
+                💬 {n ? `Discussion (${n} message${n > 1 ? "s" : ""})` : "Répondre au coach"}
+              </Link>
+            }
+          />
         );
       })}
     </div>

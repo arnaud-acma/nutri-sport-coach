@@ -49,3 +49,18 @@ Format : date, décision, raison, statut (active / remplacée par X).
    repas et dit quoi ajouter ; il ne prétend pas compter les calories au
    gramme, l'estimation sur photo étant imprécise par nature. *Raison :
    honnêteté sur les limites de l'outil.* **Active.**
+
+9. **Discussion avec le coach avancée en V1.1** (18/10, demande d'Arnaud après
+   le premier vrai test) : un fil de réponse sous chaque repas et un onglet
+   Coach pour les questions libres. Le coach lit les fiches, les repas des
+   7 derniers jours et les pesées. La photo n'est pas renvoyée dans la
+   discussion (coût) : le coach s'appuie sur sa propre analyse écrite.
+   *Raison : le retour d'un repas appelle naturellement une réponse.*
+   **Active.** (Modifie la décision n°7 : discussion libre avancée de V3 à V1.1.)
+
+10. **Le coach propose, Arnaud valide.** Quand Arnaud énonce un fait durable,
+    le coach propose une modification d'UNE fiche (remplacement d'un passage
+    exact, ou ajout d'une ligne). Rien n'est appliqué sans un clic
+    « Accepter » ; l'ancienne version est archivée dans l'historique.
+    *Raison : décision n°1, Arnaud reste propriétaire de sa connaissance.*
+    **Active.**

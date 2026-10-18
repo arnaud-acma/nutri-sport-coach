@@ -30,4 +30,34 @@ export interface AnalyzeMealInput {
 export interface LlmProvider {
   readonly name: string;
   analyzeMeal(input: AnalyzeMealInput): Promise<CoachMealReply>;
+  chat(input: ChatInput): Promise<ChatReply>;
+}
+
+/** Proposition de modification d'une fiche, faite par le coach pendant
+ *  une discussion. Rien n'est appliqué sans validation d'Arnaud. */
+export interface KnowledgeProposal {
+  slug: string;
+  /** Passage exact à remplacer ; vide = ajout en fin de fiche. */
+  ancien_texte: string;
+  /** Nouveau texte (remplace ancien_texte, ou s'ajoute en fin de fiche). */
+  nouveau_texte: string;
+  /** Pourquoi le coach propose ce changement. */
+  raison: string;
+}
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatInput {
+  systemPrompt: string;
+  /** Historique du fil, du plus ancien au plus récent ; le dernier est d'Arnaud. */
+  turns: ChatTurn[];
+}
+
+export interface ChatReply {
+  text: string;
+  proposal: KnowledgeProposal | null;
+  model: string;
 }

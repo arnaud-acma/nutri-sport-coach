@@ -34,7 +34,41 @@ Non vérifié (impossible sans les comptes d'Arnaud) :
 - Parcours complet lien magique + Storage sur un vrai projet Supabase.
 - Déploiement Vercel.
 
+## V1 en production (18 octobre 2026, matin)
+
+Mise en ligne guidée avec Arnaud : Supabase, Vercel
+(nutri-sport-coach.vercel.app), connexion par lien magique (Mac et iPhone),
+installation sur l'écran d'accueil, import des 5 fiches, crédits API du
+forfait Max liés à « Arnaud's Individual Org ».
+
+Bugs trouvés et corrigés en conditions réelles :
+- Marge haute iPhone (contenu sous la barre d'état) : zone sûre ajoutée.
+- Envoi photo « Cannot convert argument to a ByteString » : caractère
+  invisible U+2028 collé en fin de clé dans Vercel. Toutes les variables
+  sont désormais nettoyées (`src/lib/env.ts`). Reproduit puis vérifié.
+- Réponse du coach affichée en JSON brut : réponse probablement tronquée
+  (1024 jetons). Passage à 4096 et sortie via outil `verdict_repas`.
+- `tool_choice` forcé refusé par Sonnet 5.5 (erreur 400) : passage en
+  `auto`, avec repli sur la lecture du texte.
+- Heures affichées en UTC : fuseau Europe/Paris partout.
+Vérifié par Arnaud : analyse réelle d'un déjeuner avec claude-sonnet-5-5,
+qui s'appuie bien sur les fiches.
+
+Non résolu : bande vide sous la barre d'onglets sur iPhone (cosmétique,
+cause inconnue).
+
+## V1.1 (18 octobre 2026, midi) : discussion avec le coach
+
+- Fil de discussion sous chaque repas (`/repas/[id]`) et onglet Coach
+  (`/coach`). Contexte : fiches, repas des 7 derniers jours, pesées.
+- Propositions de modification de fiche, validées par Arnaud (décision 10).
+- Migration `0002_coach.sql` (table `coach_messages`) à exécuter une fois.
+- Italique Markdown corrigé (ne casse plus `invalid_request_error`).
+Vérifié : build, lint, application des propositions (4 cas).
+Non vérifié au moment du commit : appel réel de la discussion (pas de clé
+côté développement), rendu sur iPhone.
+
 Reste V2 : journal des selles (échelle de Bristol), séances et charges,
 revue hebdomadaire automatique, programme 6 mois.
-Reste V3 : discussion libre avec le coach, import Garmin, multi-utilisateurs
+Reste V3 : import Garmin, multi-utilisateurs
 (Aurore), notifications.

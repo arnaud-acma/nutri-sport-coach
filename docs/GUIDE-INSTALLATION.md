@@ -77,6 +77,12 @@ jamais dans un fichier commité, jamais dans une conversation.
 4. Deployments > bouton ... du dernier déploiement > Redeploy (les
    variables ne s'appliquent qu'au prochain déploiement).
 
+## Étape 4 bis : discussion avec le coach (V1.1)
+
+Supabase > SQL Editor > New query : colle TOUT le contenu de
+`supabase/migrations/0002_coach.sql` > Run. Attendu : "Success. No rows
+returned". Sans cette étape, l'onglet Coach affiche une erreur.
+
 ## Étape 5 : importer ta connaissance
 
 1. Récupère le fichier `connaissance-initiale.json` envoyé par Claude

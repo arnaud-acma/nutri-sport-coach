@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   // 3. Enregistrement
   const supabase = await createClient();
-  const { error: insErr } = await supabase.from("meals").insert({
+  const { data: inserted, error: insErr } = await supabase.from("meals").insert({
     user_id: user.id,
     meal_type: mealType || null,
     note: note || null,
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       commentaire: feedback.commentaire,
     }),
     model_used: feedback.model,
-  });
+  }).select("id").single();
   if (insErr) {
     return NextResponse.json(
       { error: `Enregistrement : ${insErr.message}` },
@@ -107,5 +107,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ feedback });
+  return NextResponse.json({ feedback, meal_id: inserted?.id ?? null });
 }

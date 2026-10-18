@@ -10,7 +10,9 @@ function escapeHtml(s: string): string {
 function inline(s: string): string {
   return escapeHtml(s)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/_(.+?)_/g, "<em>$1</em>");
+    // Italique seulement pour _texte_ isolé : évite de casser les
+    // identifiants techniques (invalid_request_error, snake_case...).
+    .replace(/(^|[\s(])_([^_\s][^_]*?)_(?=$|[\s.,;:!?)])/g, "$1<em>$2</em>");
 }
 
 export function mdToHtml(md: string): string {

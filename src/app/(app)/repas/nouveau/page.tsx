@@ -30,6 +30,7 @@ export default function NouveauRepas() {
   );
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [mealId, setMealId] = useState<string | null>(null);
 
   /** Réduit la photo côté téléphone (max 1600 px, JPEG qualité 0.8) :
    *  envoi plus rapide, stockage léger, et sous la limite de l'API vision.
@@ -84,6 +85,7 @@ export default function NouveauRepas() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
       setFeedback(data.feedback);
+      setMealId(data.meal_id ?? null);
       setState("fait");
     } catch (err) {
       setState("erreur");
@@ -116,9 +118,17 @@ export default function NouveauRepas() {
           <Markdown md={feedback.commentaire} />
           <p className="text-xs text-muted mt-2">Modèle : {feedback.model}</p>
         </div>
+        {mealId && (
+          <button
+            onClick={() => router.push(`/repas/${mealId}`)}
+            className="rounded-lg bg-accent text-white py-3 font-semibold"
+          >
+            💬 Répondre au coach
+          </button>
+        )}
         <button
           onClick={() => router.push("/repas")}
-          className="rounded-lg bg-accent text-white py-3 font-semibold"
+          className="rounded-lg border border-border py-3"
         >
           Voir l&apos;historique
         </button>
