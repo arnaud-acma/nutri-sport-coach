@@ -30,7 +30,7 @@ export default async function Connaissance() {
             <p className="font-semibold">{p.title}</p>
             <p className="text-xs text-muted">
               {p.content_md.trim()
-                ? `Modifiée le ${new Date(p.updated_at).toLocaleDateString("fr-FR")}`
+                ? `Modifiée le ${new Date(p.updated_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}`
                 : "Vide : à remplir ou à importer (Réglages > Importer)"}
             </p>
           </Link>

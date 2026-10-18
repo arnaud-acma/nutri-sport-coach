@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 function frDate(d: string | Date): string {
-  return new Date(d).toLocaleDateString("fr-FR", {
+  return new Date(d).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris",
     weekday: "short",
     day: "numeric",
     month: "short",

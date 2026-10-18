@@ -81,7 +81,7 @@ export default async function Repas() {
                     ? "🧪"
                     : "➕"}{" "}
                 {m.meal_type ?? "Repas"} ·{" "}
-                {new Date(m.eaten_at).toLocaleString("fr-FR", {
+                {new Date(m.eaten_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris",
                   day: "numeric",
                   month: "short",
                   hour: "2-digit",

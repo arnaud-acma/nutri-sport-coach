@@ -53,9 +53,13 @@ export class AnthropicProvider implements LlmProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: input.systemPrompt,
         messages: [{ role: "user", content }],
+        // Sortie structurée forcée : le modèle remplit les champs d'un outil
+        // au lieu d'écrire du JSON à la main (plus de JSON tronqué ou mal formé).
+        tools: [COACH_TOOL],
+        tool_choice: { type: "tool", name: COACH_TOOL.name },
       }),
     });
 
@@ -66,12 +70,70 @@ export class AnthropicProvider implements LlmProvider {
 
     const data = (await res.json()) as {
       model: string;
-      content: Array<{ type: string; text?: string }>;
+      stop_reason?: string;
+      content: Array<{ type: string; text?: string; input?: unknown }>;
     };
+    const model = data.model ?? this.model;
+    const tool = data.content?.find((b) => b.type === "tool_use");
+    if (tool && tool.input && typeof tool.input === "object") {
+      return normalizeReply(tool.input as Record<string, unknown>, model, "");
+    }
+    // Repli : réponse texte (ancien comportement).
     const text =
       data.content?.find((b) => b.type === "text")?.text?.trim() ?? "";
-    return parseCoachJson(text, data.model ?? this.model);
+    const reply = parseCoachJson(text, model);
+    if (data.stop_reason === "max_tokens") {
+      reply.commentaire += "\n\n_(Réponse coupée : limite de longueur atteinte.)_";
+    }
+    return reply;
   }
+}
+
+const COACH_TOOL = {
+  name: "verdict_repas",
+  description: "Enregistre l'analyse du repas par le coach.",
+  input_schema: {
+    type: "object",
+    properties: {
+      verdict: { type: "string", enum: ["valide", "a_completer"] },
+      resume: {
+        type: "string",
+        description: "Une phrase sur ce que tu vois dans l'assiette.",
+      },
+      ajouts: {
+        type: "array",
+        items: { type: "string" },
+        description: "Ajouts ou ajustements concrets (vide si validé).",
+      },
+      commentaire: {
+        type: "string",
+        description: "2 à 4 phrases en Markdown, tutoiement.",
+      },
+    },
+    required: ["verdict", "resume", "ajouts", "commentaire"],
+  },
+} as const;
+
+/** Met une réponse brute (objet) au format attendu par l'appli. */
+export function normalizeReply(
+  raw: Record<string, unknown>,
+  model: string,
+  fallbackText: string
+): CoachMealReply {
+  const verdict =
+    raw.verdict === "valide" || raw.verdict === "a_completer"
+      ? raw.verdict
+      : "a_completer";
+  return {
+    verdict,
+    resume: typeof raw.resume === "string" ? raw.resume : "",
+    ajouts: Array.isArray(raw.ajouts)
+      ? raw.ajouts.filter((a): a is string => typeof a === "string")
+      : [],
+    commentaire:
+      typeof raw.commentaire === "string" ? raw.commentaire : fallbackText,
+    model,
+  };
 }
 
 /** Le modèle doit renvoyer un JSON ; on tolère du texte autour. */
@@ -84,20 +146,7 @@ export function parseCoachJson(text: string, model: string): CoachMealReply {
         string,
         unknown
       >;
-      const verdict =
-        raw.verdict === "valide" || raw.verdict === "a_completer"
-          ? raw.verdict
-          : "a_completer";
-      return {
-        verdict,
-        resume: typeof raw.resume === "string" ? raw.resume : "",
-        ajouts: Array.isArray(raw.ajouts)
-          ? raw.ajouts.filter((a): a is string => typeof a === "string")
-          : [],
-        commentaire:
-          typeof raw.commentaire === "string" ? raw.commentaire : text,
-        model,
-      };
+      return normalizeReply(raw, model, text);
     } catch {
       // JSON invalide : on garde le texte brut comme commentaire.
     }

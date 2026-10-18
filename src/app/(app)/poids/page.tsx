@@ -87,7 +87,7 @@ export default async function Poids() {
             <span>
               {new Date(r.measured_at + "T00:00:00").toLocaleDateString(
                 "fr-FR",
-                { day: "numeric", month: "short", year: "2-digit" }
+                { timeZone: "Europe/Paris", day: "numeric", month: "short", year: "2-digit" }
               )}
               {r.note ? ` · ${r.note}` : ""}
             </span>

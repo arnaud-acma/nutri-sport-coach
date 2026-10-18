@@ -40,7 +40,7 @@ export default async function FichePage({
         <ul className="text-xs text-muted flex flex-col gap-1">
           {revisions?.map((r) => (
             <li key={r.id}>
-              {new Date(r.created_at).toLocaleString("fr-FR")}
+              {new Date(r.created_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}
               {r.note ? ` · ${r.note}` : ""}
             </li>
           ))}
