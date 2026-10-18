@@ -93,3 +93,20 @@ exécutée sur un Postgres embarqué (y compris relance), rendu des écrans en
 clair et sombre à 390 px avec des données fictives.
 Non vérifié : appel réel au modèle avec le nouvel outil (pas de clé ici),
 lecture EXIF sur iPhone réel, rendu sur iPhone.
+
+## Correctifs de lenteur (18 octobre 2026, soir), en production
+
+`/api/ping` (diagnostic), fonctions à Paris (`vercel.json`), un seul appel
+Auth par requête, `loading.tsx`, retour tactile. Vérifié après déploiement :
+région `cdg1`, aller-retour Supabase passé d'environ 100 ms à 40 à 60 ms.
+Non vérifié : ressenti sur iPhone.
+
+## V1.3 (18 octobre 2026, soir) : glucides, lipides, fibres, fiche cuisine
+
+Décisions 19 à 21. Migration `0004_macros_cuisine.sql`.
+- Estimation des glucides, lipides et fibres par prise, contrôle de
+  cohérence avec les calories (« à vérifier » au-delà de 25 % d'écart).
+- Jauges hors score sur l'accueil ; cibles saisissables ou calculées
+  (repères ANSES 2016) dans Réglages, avec aperçu du calcul.
+- Fiche « Cuisine et matériel », contenu importé par Réglages.
+- Le coach reçoit les totaux et repères ; export enrichi.

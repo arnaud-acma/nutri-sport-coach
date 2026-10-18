@@ -17,6 +17,13 @@ export interface CoachMealReply {
   kcal_max: number | null;
   prot_min: number | null;
   prot_max: number | null;
+  /** Glucides, lipides, fibres en grammes (fourchettes), décision 19. */
+  gluc_min: number | null;
+  gluc_max: number | null;
+  lip_min: number | null;
+  lip_max: number | null;
+  fib_min: number | null;
+  fib_max: number | null;
   /** Catégories couvertes : proteines, legumes, feculents, bon_gras, fruits. */
   categories: string[];
   /** Hypothèses prises pour l'estimation (huile supposée, portion...). */

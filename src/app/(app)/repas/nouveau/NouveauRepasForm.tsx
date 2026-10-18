@@ -22,6 +22,12 @@ interface Feedback {
   kcal_max: number | null;
   prot_min: number | null;
   prot_max: number | null;
+  gluc_min: number | null;
+  gluc_max: number | null;
+  lip_min: number | null;
+  lip_max: number | null;
+  fib_min: number | null;
+  fib_max: number | null;
   hypotheses: string;
   model: string;
 }
@@ -177,6 +183,11 @@ export default function NouveauRepasForm({
             <span className="font-semibold">Estimation :</span>{" "}
             {range(feedback.kcal_min, feedback.kcal_max, "kcal")} · protéines{" "}
             {range(feedback.prot_min, feedback.prot_max, "g")}
+          </p>
+          <p className="text-xs tabular-nums">
+            glucides {range(feedback.gluc_min, feedback.gluc_max, "g")} · lipides{" "}
+            {range(feedback.lip_min, feedback.lip_max, "g")} · fibres{" "}
+            {range(feedback.fib_min, feedback.fib_max, "g")}
           </p>
           {feedback.hypotheses && <p className="text-xs text-muted">{feedback.hypotheses}</p>}
         </div>

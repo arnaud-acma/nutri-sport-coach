@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     }
     md.push(`\n## Cibles du jour`);
     for (const t of targets ?? []) {
-      md.push(`- Depuis le ${t.valid_from} : ${t.kcal} kcal, ${t.proteines_g} g de protéines, ${t.prises_min} prises${t.note ? ` (${t.note})` : ""}`);
+      md.push(`- Depuis le ${t.valid_from} : ${t.kcal} kcal, ${t.proteines_g} g de protéines, ${t.prises_min} prises, glucides ${t.glucides_g ?? "auto"}, lipides ${t.lipides_g ?? "auto"}, fibres ${t.fibres_g ?? "auto"}${t.note ? ` (${t.note})` : ""}`);
     }
     md.push(`\n## Selles (${stools?.length ?? 0})`);
     for (const st of stools ?? []) {
@@ -66,6 +66,7 @@ export async function GET(request: Request) {
       );
       if (m.note) md.push(`Note : ${m.note}`);
       if (m.kcal_min != null) md.push(`Estimation : ${m.kcal_min} à ${m.kcal_max} kcal, ${m.prot_min} à ${m.prot_max} g de protéines, catégories : ${(m.categories ?? []).join(", ") || "aucune"}`);
+      if (m.gluc_min != null || m.lip_min != null || m.fib_min != null) md.push(`Glucides ${m.gluc_min} à ${m.gluc_max} g, lipides ${m.lip_min} à ${m.lip_max} g, fibres ${m.fib_min} à ${m.fib_max} g`);
       if (m.hypotheses) md.push(`Hypothèses : ${m.hypotheses}`);
       if (m.coach_feedback_md) md.push(`Retour du coach : ${m.coach_feedback_md}`);
       if (m.photo_path) md.push(`Photo : ${m.photo_path}`);

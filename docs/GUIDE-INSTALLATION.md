@@ -91,6 +91,13 @@ returned". Uniquement des ajouts, aucune donnée touchée ; relançable sans
 erreur. Sans cette étape, l'accueil et l'enregistrement d'un repas
 échouent.
 
+## Étape 4 quater : glucides, lipides, fibres et fiche cuisine (V1.3)
+
+Supabase > SQL Editor > New query : colle TOUT le contenu de
+`supabase/migrations/0004_macros_cuisine.sql` > Run. Attendu : "Success. No
+rows returned". Uniquement des ajouts ; relançable sans erreur. Puis
+Réglages > Importer : le fichier de la fiche cuisine (hors dépôt).
+
 ## Étape 5 : importer ta connaissance
 
 1. Récupère le fichier `connaissance-initiale.json` envoyé par Claude

@@ -14,6 +14,9 @@ export async function POST(request: Request) {
     kcal?: number | string;
     proteines_g?: number | string;
     prises_min?: number | string;
+    glucides_g?: number | string | null;
+    lipides_g?: number | string | null;
+    fibres_g?: number | string | null;
     note?: string;
   };
   const validFrom = body.valid_from || dayKey(new Date());
@@ -33,6 +36,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Prises entre 1 et 10" }, { status: 400 });
   }
 
+  // Champ vide = calcul automatique (décision 20) : stocké null.
+  const optional = (v: unknown, min: number, max: number, label: string) => {
+    if (v == null || String(v).trim() === "") return { value: null };
+    const n = Number(String(v).replace(",", "."));
+    if (!Number.isFinite(n) || n < min || n > max) return { error: `${label} entre ${min} et ${max} g, ou vide` };
+    return { value: Math.round(n) };
+  };
+  const gluc = optional(body.glucides_g, 50, 900, "Glucides");
+  const lip = optional(body.lipides_g, 20, 400, "Lipides");
+  const fib = optional(body.fibres_g, 5, 100, "Fibres");
+  for (const r of [gluc, lip, fib]) {
+    if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("nutrition_targets").upsert(
     {
@@ -41,6 +58,9 @@ export async function POST(request: Request) {
       kcal: Math.round(kcal),
       proteines_g: Math.round(prot),
       prises_min: prises,
+      glucides_g: "value" in gluc ? gluc.value : null,
+      lipides_g: "value" in lip ? lip.value : null,
+      fibres_g: "value" in fib ? fib.value : null,
       note: body.note?.trim().slice(0, 300) || null,
     },
     { onConflict: "user_id,valid_from" }

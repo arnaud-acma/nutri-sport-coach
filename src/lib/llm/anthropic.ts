@@ -133,7 +133,7 @@ interface ApiResponse {
   content: Array<{ type: string; text?: string; name?: string; input?: unknown }>;
 }
 
-const SLUGS = ["profil", "objectifs", "positions", "regime", "sante"] as const;
+const SLUGS = ["profil", "objectifs", "positions", "regime", "sante", "cuisine"] as const;
 
 const PROPOSAL_TOOL = {
   name: "proposer_modif_fiche",
@@ -200,6 +200,12 @@ const COACH_TOOL = {
       kcal_max: { type: "integer", description: "Borne haute de l'estimation calorique (kcal)." },
       prot_min: { type: "number", description: "Borne basse des protéines (g)." },
       prot_max: { type: "number", description: "Borne haute des protéines (g)." },
+      gluc_min: { type: "number", description: "Borne basse des glucides totaux (g)." },
+      gluc_max: { type: "number", description: "Borne haute des glucides totaux (g)." },
+      lip_min: { type: "number", description: "Borne basse des lipides (g)." },
+      lip_max: { type: "number", description: "Borne haute des lipides (g)." },
+      fib_min: { type: "number", description: "Borne basse des fibres (g)." },
+      fib_max: { type: "number", description: "Borne haute des fibres (g)." },
       categories: {
         type: "array",
         items: { type: "string", enum: ["proteines", "legumes", "feculents", "bon_gras", "fruits"] },
@@ -212,7 +218,9 @@ const COACH_TOOL = {
     },
     required: [
       "verdict", "resume", "ajouts", "commentaire",
-      "kcal_min", "kcal_max", "prot_min", "prot_max", "categories", "hypotheses",
+      "kcal_min", "kcal_max", "prot_min", "prot_max",
+      "gluc_min", "gluc_max", "lip_min", "lip_max", "fib_min", "fib_max",
+      "categories", "hypotheses",
     ],
   },
 } as const;
@@ -247,23 +255,37 @@ function num(v: unknown, max: number): number | null {
   return typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= max ? n : null;
 }
 
-/** Estimation chiffrée : bornes remises dans l'ordre, valeurs aberrantes
- *  écartées (un repas au-delà de 5 000 kcal ou 300 g de protéines est
- *  traité comme une erreur du modèle). */
+/** Une fourchette : bornes remises dans l'ordre ; une seule borne donne
+ *  une valeur ponctuelle ; valeur aberrante (au-delà de max) écartée. */
+function pair(lo: unknown, hi: unknown, max: number, decimals: number) {
+  let a = num(lo, max);
+  let b = num(hi, max);
+  if (a == null || b == null) a = b = a ?? b;
+  if (a != null && b != null && a > b) [a, b] = [b, a];
+  const f = 10 ** decimals;
+  return [a == null ? null : Math.round(a * f) / f, b == null ? null : Math.round(b * f) / f];
+}
+
+/** Estimation chiffrée normalisée. Plafonds par prise au-delà desquels la
+ *  valeur est traitée comme une erreur du modèle : 5 000 kcal, 300 g de
+ *  protéines, 700 g de glucides, 400 g de lipides, 100 g de fibres. */
 export function normalizeEstimate(raw: Record<string, unknown>) {
-  let kMin = num(raw.kcal_min, 5000);
-  let kMax = num(raw.kcal_max, 5000);
-  let pMin = num(raw.prot_min, 300);
-  let pMax = num(raw.prot_max, 300);
-  if (kMin == null || kMax == null) kMin = kMax = kMin ?? kMax;
-  if (pMin == null || pMax == null) pMin = pMax = pMin ?? pMax;
-  if (kMin != null && kMax != null && kMin > kMax) [kMin, kMax] = [kMax, kMin];
-  if (pMin != null && pMax != null && pMin > pMax) [pMin, pMax] = [pMax, pMin];
+  const [kMin, kMax] = pair(raw.kcal_min, raw.kcal_max, 5000, 0);
+  const [pMin, pMax] = pair(raw.prot_min, raw.prot_max, 300, 1);
+  const [gMin, gMax] = pair(raw.gluc_min, raw.gluc_max, 700, 1);
+  const [lMin, lMax] = pair(raw.lip_min, raw.lip_max, 400, 1);
+  const [fMin, fMax] = pair(raw.fib_min, raw.fib_max, 100, 1);
   return {
-    kcal_min: kMin == null ? null : Math.round(kMin),
-    kcal_max: kMax == null ? null : Math.round(kMax),
-    prot_min: pMin == null ? null : Math.round(pMin * 10) / 10,
-    prot_max: pMax == null ? null : Math.round(pMax * 10) / 10,
+    kcal_min: kMin,
+    kcal_max: kMax,
+    prot_min: pMin,
+    prot_max: pMax,
+    gluc_min: gMin,
+    gluc_max: gMax,
+    lip_min: lMin,
+    lip_max: lMax,
+    fib_min: fMin,
+    fib_max: fMax,
     categories: Array.isArray(raw.categories)
       ? [...new Set(raw.categories.filter((c): c is string => typeof c === "string" && CATS.includes(c)))]
       : [],

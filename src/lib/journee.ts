@@ -160,7 +160,53 @@ export interface Target {
   kcal: number;
   proteines_g: number;
   prises_min: number;
+  /** null ou absent : calculé à partir de la cible calorique (décision 20). */
+  glucides_g?: number | null;
+  lipides_g?: number | null;
+  fibres_g?: number | null;
   note?: string | null;
+}
+
+/** Repères ANSES pour l'adulte (rapport « Actualisation des repères du
+ *  PNNS », décembre 2016, tableau 4) : lipides 35 à 40 % de l'apport
+ *  énergétique, glucides 40 à 55 %, fibres 30 g par jour. Population
+ *  générale, pas spécifique au sport : point de départ. */
+export const ANSES = {
+  lipidesPctMin: 35,
+  lipidesPctMax: 40,
+  glucidesPctMin: 40,
+  glucidesPctMax: 55,
+  fibresG: 30,
+} as const;
+/** Part des lipides retenue pour le calcul automatique : milieu de 35-40 %. */
+const LIPIDES_PCT_AUTO = 37.5;
+
+export interface MacroTargets {
+  glucides: number;
+  lipides: number;
+  fibres: number;
+  /** true quand la valeur est calculée (champ laissé vide dans Réglages). */
+  auto: { glucides: boolean; lipides: boolean; fibres: boolean };
+}
+
+/** Cibles de glucides, lipides et fibres en grammes. Valeur saisie si
+ *  elle existe ; sinon calcul automatique : lipides à 37,5 % de l'énergie,
+ *  fibres 30 g, glucides = énergie restante après protéines et lipides
+ *  (4 kcal/g pour protéines et glucides, 9 kcal/g pour les lipides). */
+export function macroTargets(t: Target): MacroTargets {
+  const lipides = t.lipides_g ?? Math.round((t.kcal * LIPIDES_PCT_AUTO) / 100 / 9);
+  const glucides =
+    t.glucides_g ?? Math.max(0, Math.round((t.kcal - t.proteines_g * 4 - lipides * 9) / 4));
+  return {
+    glucides,
+    lipides,
+    fibres: t.fibres_g ?? ANSES.fibresG,
+    auto: {
+      glucides: t.glucides_g == null,
+      lipides: t.lipides_g == null,
+      fibres: t.fibres_g == null,
+    },
+  };
 }
 
 /** Cibles provisoires de départ (décision 12), utilisées tant qu'aucune
@@ -189,15 +235,33 @@ export interface MealEstimate {
   kcal_max: number | null;
   prot_min: number | null;
   prot_max: number | null;
+  gluc_min?: number | null;
+  gluc_max?: number | null;
+  lip_min?: number | null;
+  lip_max?: number | null;
+  fib_min?: number | null;
+  fib_max?: number | null;
   categories: string[] | null;
+}
+
+export interface Range {
+  min: number;
+  max: number;
+  mid: number;
 }
 
 export interface DaySummary {
   prises: number;
   /** Prises sans estimation (anciens repas, erreur d'analyse). */
   nonEstimees: number;
-  kcal: { min: number; max: number; mid: number };
-  prot: { min: number; max: number; mid: number };
+  kcal: Range;
+  prot: Range;
+  /** Glucides, lipides, fibres : hors score (décision 20). */
+  gluc: Range;
+  lip: Range;
+  fib: Range;
+  /** Prises sans estimation de glucides, lipides et fibres (avant la V1.3). */
+  sansMacros: number;
   categories: string[];
   score: number;
   parts: { energie: number; proteines: number; qualite: number; prises: number };
@@ -207,9 +271,19 @@ const ratio = (v: number, target: number) =>
   target > 0 ? Math.min(1, Math.max(0, v / target)) : 0;
 
 export function summarizeDay(meals: MealEstimate[], target: Target): DaySummary {
-  let kMin = 0, kMax = 0, pMin = 0, pMax = 0, nonEstimees = 0;
+  let kMin = 0, kMax = 0, pMin = 0, pMax = 0, nonEstimees = 0, sansMacros = 0;
+  const macro = { gluc: [0, 0], lip: [0, 0], fib: [0, 0] };
   const cats = new Set<string>();
   for (const m of meals) {
+    if (m.gluc_min == null && m.lip_min == null && m.fib_min == null) sansMacros++;
+    for (const k of ["gluc", "lip", "fib"] as const) {
+      const lo = m[`${k}_min`];
+      const hi = m[`${k}_max`];
+      if (lo != null && hi != null) {
+        macro[k][0] += Number(lo);
+        macro[k][1] += Number(hi);
+      }
+    }
     if (m.kcal_min == null || m.kcal_max == null) nonEstimees++;
     else {
       kMin += m.kcal_min;
@@ -235,6 +309,10 @@ export function summarizeDay(meals: MealEstimate[], target: Target): DaySummary 
     nonEstimees,
     kcal: { min: kMin, max: kMax, mid: Math.round(kMid) },
     prot: { min: Math.round(pMin), max: Math.round(pMax), mid: Math.round(pMid) },
+    gluc: toRange(macro.gluc),
+    lip: toRange(macro.lip),
+    fib: toRange(macro.fib),
+    sansMacros,
     categories: CATEGORY_KEYS.filter((c) => cats.has(c)),
     score,
     parts: {
@@ -244,6 +322,26 @@ export function summarizeDay(meals: MealEstimate[], target: Target): DaySummary 
       prises: Math.round(parts.prises),
     },
   };
+}
+
+function toRange([lo, hi]: number[]): Range {
+  return { min: Math.round(lo), max: Math.round(hi), mid: Math.round((lo + hi) / 2) };
+}
+
+/** Cohérence d'une estimation : les calories annoncées doivent être proches
+ *  de 4 x protéines + 4 x glucides + 9 x lipides (milieux des fourchettes).
+ *  Renvoie l'écart relatif, ou null si les données manquent. Au-delà de
+ *  ECART_MAX, l'estimation est signalée « à vérifier ». */
+export const ECART_MAX = 0.25;
+export function ecartCoherence(m: MealEstimate): number | null {
+  const mid = (a?: number | null, b?: number | null) =>
+    a == null || b == null ? null : (Number(a) + Number(b)) / 2;
+  const k = mid(m.kcal_min, m.kcal_max);
+  const p = mid(m.prot_min, m.prot_max);
+  const g = mid(m.gluc_min, m.gluc_max);
+  const l = mid(m.lip_min, m.lip_max);
+  if (k == null || p == null || g == null || l == null || k <= 0) return null;
+  return Math.abs(4 * p + 4 * g + 9 * l - k) / k;
 }
 
 /** Regroupe des repas par journée nutritionnelle. */

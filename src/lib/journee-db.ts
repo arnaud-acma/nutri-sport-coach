@@ -3,6 +3,9 @@ import {
   CATEGORIES,
   DEFAULT_TARGET,
   dayBounds,
+  ecartCoherence,
+  ECART_MAX,
+  macroTargets,
   isCollation,
   summarizeDay,
   targetFor,
@@ -12,7 +15,8 @@ import {
 
 export const MEAL_COLUMNS =
   "id,eaten_at,meal_type,note,photo_path,coach_verdict,coach_feedback_md,model_used," +
-  "kcal_min,kcal_max,prot_min,prot_max,categories,hypotheses";
+  "kcal_min,kcal_max,prot_min,prot_max,gluc_min,gluc_max,lip_min,lip_max,fib_min,fib_max," +
+  "categories,hypotheses";
 
 export interface DayMeal {
   id: string;
@@ -27,6 +31,12 @@ export interface DayMeal {
   kcal_max: number | null;
   prot_min: number | null;
   prot_max: number | null;
+  gluc_min: number | null;
+  gluc_max: number | null;
+  lip_min: number | null;
+  lip_max: number | null;
+  fib_min: number | null;
+  fib_max: number | null;
   categories: string[] | null;
   hypotheses: string | null;
 }
@@ -43,7 +53,7 @@ export interface Stool {
 export async function loadTargets(supabase: SupabaseClient): Promise<Target[]> {
   const { data, error } = await supabase
     .from("nutrition_targets")
-    .select("valid_from,kcal,proteines_g,prises_min,note")
+    .select("valid_from,kcal,proteines_g,prises_min,glucides_g,lipides_g,fibres_g,note")
     .order("valid_from");
   if (error || !data?.length) return [DEFAULT_TARGET];
   return data as Target[];
@@ -122,7 +132,24 @@ const hhmm = (d: string) =>
 
 export function rangeLabel(min: number | null, max: number | null, unit: string): string {
   if (min == null || max == null) return "non estimé";
-  return min === max ? `${min} ${unit}` : `${min} à ${max} ${unit}`;
+  const f = (n: number) => String(Math.round(Number(n)));
+  return f(min) === f(max) ? `${f(min)} ${unit}` : `${f(min)} à ${f(max)} ${unit}`;
+}
+
+/** « G 60 à 80 g · L 20 g · F 4 à 6 g » ; vide si rien d'estimé. */
+export function macrosLabel(m: DayMeal): string {
+  if (m.gluc_min == null && m.lip_min == null && m.fib_min == null) return "";
+  return [
+    `glucides ${rangeLabel(m.gluc_min, m.gluc_max, "g")}`,
+    `lipides ${rangeLabel(m.lip_min, m.lip_max, "g")}`,
+    `fibres ${rangeLabel(m.fib_min, m.fib_max, "g")}`,
+  ].join(" · ");
+}
+
+/** true si l'estimation est incohérente (calories et macros ne collent pas). */
+export function aVerifier(m: DayMeal): boolean {
+  const e = ecartCoherence(m);
+  return e != null && e > ECART_MAX;
 }
 
 const catLabel = (k: string) => CATEGORIES.find((c) => c.key === k)?.label ?? k;
@@ -133,9 +160,11 @@ export function describeDay(day: DayData, excludeMealId?: string): string {
   const meals = day.meals.filter((m) => m.id !== excludeMealId);
   const summary = excludeMealId ? summarizeDay(meals, day.target) : day.summary;
   const t = day.target;
+  const mt = macroTargets(t);
   const lines = [
     `Journée nutritionnelle du ${day.key} (de 4h à 4h, heure de Paris).`,
     `Cibles en vigueur (provisoires, à recaler sur la courbe de poids) : ${t.kcal} kcal estimées, ${t.proteines_g} g de protéines, ${t.prises_min} prises ou plus, catégories ${CATEGORIES.map((c) => c.label.toLowerCase()).join(", ")}.`,
+    `Repères hors score : glucides ${mt.glucides} g, lipides ${mt.lipides} g, fibres ${mt.fibres} g${mt.auto.glucides || mt.auto.lipides || mt.auto.fibres ? " (calculés d'après les repères ANSES pour l'adulte, non spécifiques au sport)" : ""}.`,
   ];
   if (!meals.length) {
     lines.push("Aucune autre prise enregistrée pour l'instant dans cette journée.");
@@ -150,7 +179,7 @@ export function describeDay(day: DayData, excludeMealId?: string): string {
       );
     }
     lines.push(
-      `Total estimé : ${summary.kcal.min} à ${summary.kcal.max} kcal, ${summary.prot.min} à ${summary.prot.max} g de protéines, ${summary.prises} prises.`,
+      `Total estimé : ${summary.kcal.min} à ${summary.kcal.max} kcal, ${summary.prot.min} à ${summary.prot.max} g de protéines, glucides ${summary.gluc.min} à ${summary.gluc.max} g, lipides ${summary.lip.min} à ${summary.lip.max} g, fibres ${summary.fib.min} à ${summary.fib.max} g, ${summary.prises} prises.`,
       `Catégories déjà couvertes : ${summary.categories.map(catLabel).join(", ") || "aucune"}.`,
       `Reste environ ${Math.max(0, t.kcal - summary.kcal.mid)} kcal et ${Math.max(0, t.proteines_g - summary.prot.mid)} g de protéines pour atteindre les cibles.`
     );

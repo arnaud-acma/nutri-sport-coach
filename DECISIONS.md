@@ -114,3 +114,38 @@ Format : date, décision, raison, statut (active / remplacée par X).
 
 18. **Boissons, café, alcool et tabac non suivis.** Décision d'Arnaud du
     18/10 : trop de saisie pour la valeur obtenue. **Active.**
+
+## 2026-10-18 (soir) : V1.3, performances, macronutriments, fiche cuisine
+
+19. **Glucides, lipides et fibres estimés pour chaque prise**, en
+    fourchettes, avec contrôle de cohérence : si les calories s'écartent de
+    plus de 25 % de 4 x protéines + 4 x glucides + 9 x lipides, l'estimation
+    est signalée « à vérifier ». Les fibres sont l'estimation la moins
+    fiable et sont présentées comme telles. *Raison : données utiles pour
+    Arnaud (bon gras), pour Aurore (endurance) et pour croiser avec le
+    journal des selles.* **Active.**
+
+20. **Cibles de glucides, lipides et fibres, hors score.** Chaque cible
+    est saisissable ; vide, elle est calculée à partir de la cible
+    calorique selon les repères ANSES pour l'adulte (rapport
+    « Actualisation des repères du PNNS », décembre 2016, tableau 4) :
+    lipides 37,5 % de l'énergie (milieu de 35 à 40 %), fibres 30 g par
+    jour, glucides = énergie restante après protéines et lipides. Repères
+    de population générale, non spécifiques au sport. Elles n'entrent pas
+    dans le score, pour que l'historique reste comparable. *Raison :
+    penser « système » pour les futurs utilisateurs (saisir calories et
+    protéines suffit), sans inventer de valeurs sans source.* **Active.**
+
+21. **Fiche « Cuisine et matériel »** (sixième fiche, slug `cuisine`) :
+    goûts, matériel, format d'aide attendu. Contenu personnel importé par
+    Réglages, jamais dans le dépôt (décision 2). Version condensée, car
+    les fiches sont renvoyées au coach à chaque appel (le modèle n'a pas
+    de mémoire entre deux appels). Chaque futur utilisateur aura la sienne.
+    **Active.**
+
+22. **Fonctions Vercel à Paris (`cdg1`)** via `vercel.json`, au lieu de
+    Washington par défaut. Mesuré avec `/api/ping` : aller-retour vers
+    Supabase d'environ 100 ms depuis Washington, environ 40 à 60 ms depuis
+    Paris. Région exacte de Supabase non relevée (Europe, déduit de la
+    mesure). S'ajoutent : une seule vérification de connexion par requête,
+    un écran de chargement instantané et un retour tactile. **Active.**

@@ -1,6 +1,6 @@
 import Markdown from "@/components/Markdown";
 
-import { rangeLabel, type DayMeal } from "@/lib/journee-db";
+import { aVerifier, macrosLabel, rangeLabel, type DayMeal } from "@/lib/journee-db";
 import { CATEGORIES } from "@/lib/journee";
 
 export type MealRow = DayMeal;
@@ -69,6 +69,13 @@ export default function MealCard({
                 .join(", ")}`
             : ""}
         </p>
+        {macrosLabel(meal) && <p className="text-xs tabular-nums">{macrosLabel(meal)}</p>}
+        {aVerifier(meal) && (
+          <p className="text-xs text-danger">
+            ⚠️ Estimation incohérente : les calories ne correspondent pas aux protéines,
+            glucides et lipides annoncés. Précise la note puis réanalyse.
+          </p>
+        )}
         {meal.hypotheses && <p className="text-xs text-muted">Hypothèses : {meal.hypotheses}</p>}
         {fb.ajouts && fb.ajouts.length > 0 && (
           <ul className="list-disc pl-5 text-sm">

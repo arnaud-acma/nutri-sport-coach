@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { CATEGORIES, dayKey, frDayLabel, isCollation, shiftDay } from "@/lib/journee";
-import { parseFeedback, rangeLabel, type DayData } from "@/lib/journee-db";
+import { CATEGORIES, dayKey, frDayLabel, isCollation, macroTargets, shiftDay } from "@/lib/journee";
+import { aVerifier, parseFeedback, rangeLabel, type DayData } from "@/lib/journee-db";
 import DeleteStoolButton from "@/components/DeleteStoolButton";
 
 const hhmm = (d: string) =>
@@ -25,7 +25,8 @@ function Meter({
   detail: string;
   ratio: number;
 }) {
-  const pct = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
+  const r = Number.isFinite(ratio) ? ratio : 0;
+  const pct = Math.round(Math.min(1, Math.max(0, r)) * 100);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between text-sm">
@@ -42,7 +43,7 @@ function Meter({
       >
         <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-xs text-muted">{detail}</p>
+      {detail && <p className="text-xs text-muted">{detail}</p>}
     </div>
   );
 }
@@ -77,6 +78,8 @@ function ScoreRing({ score }: { score: number }) {
 
 export default function DayView({ day }: { day: DayData }) {
   const { summary: s, target: t } = day;
+  const mt = macroTargets(t);
+  const anyAuto = mt.auto.glucides || mt.auto.lipides || mt.auto.fibres;
   const today = dayKey(new Date());
   const isToday = day.key === today;
   const prev = shiftDay(day.key, -1);
@@ -132,6 +135,38 @@ export default function DayView({ day }: { day: DayData }) {
           detail={s.prises ? `Estimation : ${s.prot.min} à ${s.prot.max} g` : "Cible du jour"}
           ratio={s.prot.mid / t.proteines_g}
         />
+
+        <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+          <p className="text-xs text-muted">
+            Hors score : glucides, lipides, fibres
+            {anyAuto ? " · cibles calculées (repères ANSES adulte)" : ""}
+          </p>
+          <Meter
+            label="Glucides"
+            value={`${s.gluc.mid} / ${mt.glucides} g`}
+            detail={s.prises ? `Estimation : ${s.gluc.min} à ${s.gluc.max} g` : ""}
+            ratio={s.gluc.mid / mt.glucides}
+          />
+          <Meter
+            label="Lipides"
+            value={`${s.lip.mid} / ${mt.lipides} g`}
+            detail={s.prises ? `Estimation : ${s.lip.min} à ${s.lip.max} g` : ""}
+            ratio={s.lip.mid / mt.lipides}
+          />
+          <Meter
+            label="Fibres"
+            value={`${s.fib.mid} / ${mt.fibres} g`}
+            detail={s.prises ? `Estimation très approximative : ${s.fib.min} à ${s.fib.max} g` : ""}
+            ratio={s.fib.mid / mt.fibres}
+          />
+          {s.sansMacros > 0 && s.prises > 0 && (
+            <p className="text-xs text-muted">
+              {s.sansMacros} prise{s.sansMacros > 1 ? "s" : ""} sans détail glucides, lipides,
+              fibres (enregistrée{s.sansMacros > 1 ? "s" : ""} avant la V1.3) : réanalyse possible
+              depuis sa fiche.
+            </p>
+          )}
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between text-sm">
@@ -221,6 +256,7 @@ export default function DayView({ day }: { day: DayData }) {
                 {rangeLabel(m.prot_min, m.prot_max, "g")}
                 {!isCollation(m.meal_type) && m.coach_verdict === "a_completer" ? " · ➕ à compléter" : ""}
                 {m.coach_verdict === "valide" ? " · ✅" : ""}
+                {aVerifier(m) ? " · ⚠️ estimation à vérifier" : ""}
               </span>
             </Link>
           );

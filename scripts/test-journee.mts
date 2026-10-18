@@ -151,3 +151,33 @@ assert.equal(parseEatenAt("2026-10-18T13:00:00Z", now), null); // futur
 assert.equal(parseEatenAt("2026-07-01T13:00:00Z", now), null); // trop ancien
 assert.equal(parseEatenAt("2026-10-17T13:00:00Z", now)!.toISOString(), "2026-10-17T13:00:00.000Z");
 console.log("ok - créneaux par type et heure de prise");
+
+import { macroTargets, ecartCoherence, summarizeDay as sum2 } from "../src/lib/journee.ts";
+{
+  // Calcul automatique pour 3 000 kcal et 115 g de protéines
+  const m = macroTargets({ valid_from: "2026-10-18", kcal: 3000, proteines_g: 115, prises_min: 5 });
+  assert.equal(m.lipides, 125); // 37,5 % de 3 000 kcal / 9
+  assert.equal(m.glucides, 354); // (3000 - 460 - 1125) / 4 = 353,75
+  assert.equal(m.fibres, 30);
+  assert.deepEqual(m.auto, { glucides: true, lipides: true, fibres: true });
+  // Glucides restants entre 40 et 55 % de l'énergie (repère ANSES)
+  const pct = (m.glucides * 4) / 3000;
+  assert.ok(pct >= 0.4 && pct <= 0.55);
+  // Valeurs saisies prioritaires ; glucides recalculés sur les lipides saisis
+  const m2 = macroTargets({ valid_from: "x", kcal: 3000, proteines_g: 115, prises_min: 5, lipides_g: 110, fibres_g: 35 });
+  assert.equal(m2.lipides, 110);
+  assert.equal(m2.glucides, 388); // (3000 - 460 - 990) / 4 = 387,5
+  assert.equal(m2.fibres, 35);
+  assert.deepEqual(m2.auto, { glucides: true, lipides: false, fibres: false });
+  // Cohérence : 4*30 + 4*60 + 9*20 = 540 kcal
+  const ok = { kcal_min: 500, kcal_max: 600, prot_min: 30, prot_max: 30, gluc_min: 60, gluc_max: 60, lip_min: 20, lip_max: 20, categories: [] };
+  assert.ok(ecartCoherence(ok)! < 0.05);
+  assert.ok(ecartCoherence({ ...ok, kcal_min: 1000, kcal_max: 1000 })! > 0.25);
+  assert.equal(ecartCoherence({ ...ok, gluc_min: null }), null);
+  // Totaux journaliers des macros, anciens repas sans macros comptés à part
+  const s = sum2([ok, { kcal_min: 300, kcal_max: 300, prot_min: 10, prot_max: 10, categories: [] }],
+    { valid_from: "x", kcal: 3000, proteines_g: 115, prises_min: 5 });
+  assert.deepEqual(s.gluc, { min: 60, max: 60, mid: 60 });
+  assert.equal(s.sansMacros, 1);
+  console.log("ok - cibles glucides, lipides, fibres ; cohérence ; totaux");
+}

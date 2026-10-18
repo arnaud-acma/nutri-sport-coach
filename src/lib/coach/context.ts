@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { dayBounds, dayKey, groupByDay, shiftDay, summarizeDay, targetFor } from "@/lib/journee";
+import { dayBounds, dayKey, groupByDay, macroTargets, shiftDay, summarizeDay, targetFor } from "@/lib/journee";
 import {
   loadMealsBetween,
   loadStoolsBetween,
@@ -67,6 +67,7 @@ export async function buildCoachContext(
     "",
     "### Cibles du jour en vigueur (provisoires)",
     `${t.kcal} kcal estimées, ${t.proteines_g} g de protéines, ${t.prises_min} prises ou plus, 5 catégories (protéines, légumes, féculents, bon gras, fruits). Score du jour sur 100 : énergie 35, protéines 35, qualité 20, prises 10.`,
+    `Hors score : glucides ${macroTargets(t).glucides} g, lipides ${macroTargets(t).lipides} g, fibres ${macroTargets(t).fibres} g (vides dans les réglages = calculés d'après les repères ANSES 2016 pour l'adulte, non spécifiques au sport).`,
     "",
     "### Journées des 7 derniers jours (estimations en fourchette)"
   );
@@ -78,7 +79,7 @@ export async function buildCoachContext(
     parts.push(
       `- ${key}${key === today ? " (aujourd'hui, en cours)" : ""} : ` +
         (list.length
-          ? `score ${sum.score}/100, ${sum.kcal.min} à ${sum.kcal.max} kcal, ${sum.prot.min} à ${sum.prot.max} g de protéines, ${sum.prises} prises, catégories : ${sum.categories.join(", ") || "aucune"}`
+          ? `score ${sum.score}/100, ${sum.kcal.min} à ${sum.kcal.max} kcal, ${sum.prot.min} à ${sum.prot.max} g de protéines, glucides ${sum.gluc.mid} g, lipides ${sum.lip.mid} g, fibres ${sum.fib.mid} g (milieux de fourchette), ${sum.prises} prises, catégories : ${sum.categories.join(", ") || "aucune"}`
           : "rien d'enregistré")
     );
     for (const m of list) {
