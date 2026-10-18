@@ -1,6 +1,10 @@
 import { requireUser } from "@/lib/auth";
 import ImportKnowledge from "./ImportKnowledge";
 import { cleanEnv } from "@/lib/env";
+import TargetsForm from "./TargetsForm";
+import { createClient } from "@/lib/supabase/server";
+import { loadTargets } from "@/lib/journee-db";
+import { DEFAULT_TARGET, dayKey, targetFor } from "@/lib/journee";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +14,19 @@ export default async function Reglages() {
   const hasKey = Boolean(cleanEnv(process.env.ANTHROPIC_API_KEY));
   const model = cleanEnv(process.env.LLM_MODEL) || "claude-sonnet-5-5";
   const effective = provider === "mock" || !hasKey ? "mock (simulé)" : provider;
+  const targets = await loadTargets(await createClient());
+  const today = dayKey(new Date());
 
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-xl font-bold">Réglages</h1>
+
+      <TargetsForm
+        current={targetFor(today, targets)}
+        history={targets}
+        today={today}
+        isDefault={targets.length === 1 && targets[0] === DEFAULT_TARGET}
+      />
 
       <section className="rounded-xl border border-border bg-card p-4 text-sm flex flex-col gap-1">
         <h2 className="font-semibold">Coach LLM</h2>
@@ -41,7 +54,7 @@ export default async function Reglages() {
         <h2 className="font-semibold">Exporter mes données</h2>
         <p className="text-xs text-muted">
           Tout ce que l&apos;appli sait : fiches (avec historique), repas,
-          pesées. C&apos;est ta garantie d&apos;indépendance.
+          pesées, selles, cibles. C&apos;est ta garantie d&apos;indépendance.
         </p>
         <div className="flex gap-2">
           <a

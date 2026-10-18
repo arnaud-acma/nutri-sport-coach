@@ -37,6 +37,9 @@ Tests rapides sans aucune clé : `LLM_PROVIDER=mock` (réponses simulées).
 ```bash
 npm run build   # vérification complète types + build
 node scripts/test-llm.mjs   # tests de l'adaptateur LLM (mock + parseur)
+node scripts/test-journee.mts     # journée 4h-4h, créneaux, cibles, score
+node scripts/test-exif.mts        # heure de prise lue dans la photo
+node scripts/test-estimation.mts  # normalisation des estimations du coach
 ```
 
 Premier déploiement

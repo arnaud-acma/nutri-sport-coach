@@ -83,6 +83,14 @@ Supabase > SQL Editor > New query : colle TOUT le contenu de
 `supabase/migrations/0002_coach.sql` > Run. Attendu : "Success. No rows
 returned". Sans cette étape, l'onglet Coach affiche une erreur.
 
+## Étape 4 ter : journée, jauges et selles (V1.2)
+
+Supabase > SQL Editor > New query : colle TOUT le contenu de
+`supabase/migrations/0003_journee.sql` > Run. Attendu : "Success. No rows
+returned". Uniquement des ajouts, aucune donnée touchée ; relançable sans
+erreur. Sans cette étape, l'accueil et l'enregistrement d'un repas
+échouent.
+
 ## Étape 5 : importer ta connaissance
 
 1. Récupère le fichier `connaissance-initiale.json` envoyé par Claude

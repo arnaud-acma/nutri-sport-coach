@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import MealCard, { type MealRow } from "@/components/MealCard";
+import { MEAL_COLUMNS } from "@/lib/journee-db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function Repas() {
   const supabase = await createClient();
   const { data: meals } = await supabase
     .from("meals")
-    .select("id,eaten_at,meal_type,note,photo_path,coach_verdict,coach_feedback_md,model_used")
+    .select(MEAL_COLUMNS)
     .order("eaten_at", { ascending: false })
     .limit(30)
     .returns<MealRow[]>();

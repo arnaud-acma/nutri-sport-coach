@@ -14,8 +14,14 @@ export async function GET(request: Request) {
   const format = new URL(request.url).searchParams.get("format") ?? "json";
   const supabase = await createClient();
 
-  const [{ data: pages }, { data: revisions }, { data: meals }, { data: weights }] =
-    await Promise.all([
+  const [
+    { data: pages },
+    { data: revisions },
+    { data: meals },
+    { data: weights },
+    { data: stools },
+    { data: targets },
+  ] = await Promise.all([
       supabase.from("knowledge_pages").select("*").order("sort_order"),
       supabase
         .from("knowledge_revisions")
@@ -23,6 +29,9 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false }),
       supabase.from("meals").select("*").order("eaten_at"),
       supabase.from("weights").select("*").order("measured_at"),
+      // Tables de la migration 0003 : vides si elle n'a pas été exécutée.
+      supabase.from("stools").select("*").order("occurred_at"),
+      supabase.from("nutrition_targets").select("*").order("valid_from"),
     ]);
 
   const exportedAt = new Date().toISOString();
@@ -42,12 +51,22 @@ export async function GET(request: Request) {
     for (const w of weights ?? []) {
       md.push(`- ${w.measured_at} : ${w.weight_kg} kg${w.note ? ` (${w.note})` : ""}`);
     }
+    md.push(`\n## Cibles du jour`);
+    for (const t of targets ?? []) {
+      md.push(`- Depuis le ${t.valid_from} : ${t.kcal} kcal, ${t.proteines_g} g de protéines, ${t.prises_min} prises${t.note ? ` (${t.note})` : ""}`);
+    }
+    md.push(`\n## Selles (${stools?.length ?? 0})`);
+    for (const st of stools ?? []) {
+      md.push(`- ${st.occurred_at} : Bristol ${st.bristol}${st.flottent === true ? ", flottent" : st.flottent === false ? ", coulent" : ""}${st.note ? ` (${st.note})` : ""}`);
+    }
     md.push(`\n## Repas (${meals?.length ?? 0})`);
     for (const m of meals ?? []) {
       md.push(
         `\n### ${m.eaten_at} · ${m.meal_type ?? "repas"} · verdict : ${m.coach_verdict ?? "?"}`
       );
       if (m.note) md.push(`Note : ${m.note}`);
+      if (m.kcal_min != null) md.push(`Estimation : ${m.kcal_min} à ${m.kcal_max} kcal, ${m.prot_min} à ${m.prot_max} g de protéines, catégories : ${(m.categories ?? []).join(", ") || "aucune"}`);
+      if (m.hypotheses) md.push(`Hypothèses : ${m.hypotheses}`);
       if (m.coach_feedback_md) md.push(`Retour du coach : ${m.coach_feedback_md}`);
       if (m.photo_path) md.push(`Photo : ${m.photo_path}`);
     }
@@ -65,7 +84,16 @@ export async function GET(request: Request) {
 
   return new NextResponse(
     JSON.stringify(
-      { exported_at: exportedAt, version: 1, pages, revisions, meals, weights },
+      {
+        exported_at: exportedAt,
+        version: 2,
+        pages,
+        revisions,
+        meals,
+        weights,
+        stools: stools ?? [],
+        nutrition_targets: targets ?? [],
+      },
       null,
       2
     ),

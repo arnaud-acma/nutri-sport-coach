@@ -72,3 +72,24 @@ Reste V2 : journal des selles (échelle de Bristol), séances et charges,
 revue hebdomadaire automatique, programme 6 mois.
 Reste V3 : import Garmin, multi-utilisateurs
 (Aurore), notifications.
+
+## V1.2 (18 octobre 2026, après-midi) : la journée nutritionnelle
+
+Décisions 11 à 18 (DECISIONS.md). Migration `0003_journee.sql`.
+- Accueil = journée en cours (4h à 4h) : score sur 100, jauges énergie et
+  protéines (estimations en fourchette), qualité sur 5 catégories, prises.
+  Flèches pour naviguer d'un jour à l'autre (`/jour/[date]`).
+- Onglet Historique (remplace Repas) : 30 jours, moyennes sur 7 jours.
+- Six créneaux, photo facultative partout, saisie texte seule possible.
+  Collations estimées sans commentaire du coach.
+- Heure de prise modifiable ; lue dans l'EXIF de la photo quand il existe.
+- Modifier, réanalyser, supprimer une prise (`/api/meals/[id]`).
+- Le coach reçoit la journée en cours (déjà mangé, reste à atteindre).
+- Cibles datées dans Réglages (départ : 3 000 kcal, 115 g, 5 prises).
+- Journal des selles (Bristol, flottent, remarque), transmis au coach.
+- Export : selles et cibles ajoutées (format version 2).
+Vérifié : build, lint, tests (journée, EXIF, estimation, LLM), migration
+exécutée sur un Postgres embarqué (y compris relance), rendu des écrans en
+clair et sombre à 390 px avec des données fictives.
+Non vérifié : appel réel au modèle avec le nouvel outil (pas de clé ici),
+lecture EXIF sur iPhone réel, rendu sur iPhone.

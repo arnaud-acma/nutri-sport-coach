@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import MealCard, { type MealRow } from "@/components/MealCard";
+import { MEAL_COLUMNS } from "@/lib/journee-db";
 import CoachThread from "@/components/CoachThread";
+import MealEditor from "./MealEditor";
+import { dayKey, isCollation, toParisInputValue } from "@/lib/journee";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +22,13 @@ export default async function RepasDetail({
   const supabase = await createClient();
   const { data: meal } = await supabase
     .from("meals")
-    .select("id,eaten_at,meal_type,note,photo_path,coach_verdict,coach_feedback_md,model_used")
+    .select(MEAL_COLUMNS)
     .eq("id", id)
     .maybeSingle<MealRow>();
   if (!meal) notFound();
+
+  const key = dayKey(new Date(meal.eaten_at));
+  const dayHref = key === dayKey(new Date()) ? "/" : `/jour/${key}`;
 
   let photoUrl: string | null = null;
   if (meal.photo_path) {
@@ -34,11 +40,20 @@ export default async function RepasDetail({
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/repas" className="text-sm text-accent underline">
-        ← Tous les repas
+      <Link href={dayHref} className="text-sm text-accent underline">
+        ← Journée
       </Link>
       <MealCard meal={meal} photoUrl={photoUrl} />
-      <h2 className="font-semibold">Discussion sur ce repas</h2>
+      <MealEditor
+        id={meal.id}
+        mealType={meal.meal_type ?? "déjeuner"}
+        time={toParisInputValue(new Date(meal.eaten_at))}
+        note={meal.note ?? ""}
+        hasPhoto={Boolean(meal.photo_path)}
+      />
+      <h2 className="font-semibold">
+        Discussion sur {isCollation(meal.meal_type) ? "cette collation" : "ce repas"}
+      </h2>
       <CoachThread
         mealId={meal.id}
         placeholder="Ta réponse (ex. : j'avais pris du pain avant la photo / pourquoi tu dis ça ?)"

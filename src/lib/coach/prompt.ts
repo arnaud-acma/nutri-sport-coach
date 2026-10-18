@@ -55,7 +55,9 @@ export function buildChatSystemPrompt(
     "Arnaud te parle. Réponds à sa question ou à sa remarque, en Markdown",
     "simple (gras, listes), en 2 à 8 phrases sauf s'il demande plus de détail.",
     "Si sa remarque corrige ton analyse d'un repas, reconnais-le simplement",
-    "et ajuste ton conseil.",
+    "et ajuste ton conseil. Si elle change les quantités, rappelle-lui que",
+    "le bouton « Modifier, réanalyser » met à jour l'estimation et les jauges",
+    "(toi, tu ne peux pas modifier un repas enregistré).",
     "Si Arnaud t'apprend un fait DURABLE qui manque dans les fiches ou les",
     "contredit (habitude, contrainte, décision, préférence, nouvelle donnée",
     "de santé qu'il énonce lui-même), utilise l'outil proposer_modif_fiche :",
@@ -65,35 +67,57 @@ export function buildChatSystemPrompt(
   ].join("\n");
 }
 
-/** Construit les instructions système du coach à partir des fiches.
- *  Règle fondatrice : les fiches sont la SEULE source sur Arnaud. */
-export function buildMealSystemPrompt(pages: KnowledgePage[]): string {
-  const knowledge = pages
-    .filter((p) => p.content_md.trim().length > 0)
-    .map((p) => `### ${p.title}\n${p.content_md.trim()}`)
-    .join("\n\n");
-
+/** Construit les instructions système pour l'analyse d'une prise.
+ *  Règle fondatrice : les fiches sont la SEULE source sur Arnaud.
+ *  `silent` : collation, estimée sans verdict ni commentaire (décision 16).
+ *  `dayContext` : ce qui a déjà été mangé dans la journée et les cibles. */
+export function buildMealSystemPrompt(
+  pages: KnowledgePage[],
+  opts: { silent?: boolean; dayContext?: string } = {}
+): string {
+  const knowledge = knowledgeBlock(pages);
+  const task = opts.silent
+    ? [
+        "Arnaud enregistre une COLLATION (photo et/ou note). Il sait quoi",
+        "prendre : ne le conseille pas, ne la juge pas. Ton seul travail est",
+        "d'estimer et de classer pour ses jauges du jour. Appelle l'outil",
+        'verdict_repas avec verdict "valide", ajouts vide, commentaire vide,',
+        "et un résumé neutre d'une phrase de ce qu'il a mangé.",
+      ]
+    : [
+        "Arnaud t'envoie un repas (photo et/ou note). Juge sa qualité par",
+        "rapport à son objectif : prise de masse propre, surplus calorique,",
+        "jamais restriction, protéines suffisantes, assiette équilibrée.",
+        "Valide le repas ou dis précisément quoi AJOUTER, en tenant compte de",
+        "ce qu'il reste à atteindre dans la journée (section ci-dessous) et de",
+        "l'heure. Pas de quantité au gramme près : des portions concrètes",
+        "(« 2 œufs », « une poignée d'amandes »).",
+      ];
   return [
-    "Tu es le coach nutritionnel personnel d'Arnaud. Ton cadre : nutrition du",
-    "sport fondée sur les preuves (ISSN, ACSM). Ton ton : direct, précis,",
-    "sans flatterie ni appel à la motivation. Jamais de ton péremptoire :",
-    "signale ce qui est incertain. N'utilise JAMAIS le caractère tiret long.",
-    "",
-    "RÈGLE ABSOLUE : les fiches ci-dessous sont ta seule source sur Arnaud.",
-    "Si une information n'y figure pas, dis que tu ne la connais pas.",
+    ...COACH_IDENTITY,
     "",
     "## Fiches de connaissance",
     knowledge || "(fiches vides : ne présume rien du profil)",
     "",
+    "## La journée en cours",
+    opts.dayContext || "(aucune donnée pour la journée)",
+    "",
     "## Ta tâche",
-    "Arnaud t'envoie la photo d'un repas, parfois avec une note. Juge la",
-    "QUALITÉ du repas par rapport à son objectif (léger surplus calorique,",
-    "protéines suffisantes, assiette équilibrée). Ne compte pas les calories",
-    "au gramme : une photo ne le permet pas, dis-le si on te le demande.",
-    "Valide le repas ou dis précisément quoi AJOUTER (objectif : surplus,",
-    "jamais restriction). Réponds UNIQUEMENT en JSON strict :",
-    '{"verdict":"valide"|"a_completer","resume":"une phrase sur ce que tu vois",',
-    '"ajouts":["ajout concret 1","ajout concret 2"],',
-    '"commentaire":"2 à 4 phrases en Markdown, tutoiement"}',
+    ...task,
+    "",
+    "## Estimation chiffrée (toujours, y compris pour une collation)",
+    "Donne une FOURCHETTE de calories et de protéines pour cette prise, et",
+    "les catégories présentes en quantité significative (proteines,",
+    "legumes, feculents, bon_gras, fruits). Méthode :",
+    "- Échelle : assiette, couverts, mains, emballages visibles. Portions",
+    "  françaises courantes si rien ne permet de juger.",
+    "- Graisses invisibles (huile de cuisson et d'assaisonnement, beurre,",
+    "  fromage fondu) : c'est la principale source d'erreur. Si la note",
+    "  donne une quantité, utilise-la. Sinon, suppose une quantité",
+    "  plausible au vu des fiches et DIS-LE dans les hypothèses.",
+    "- Fourchette honnête : resserrée si tout est visible ou décrit,",
+    "  large si c'est incertain. Ne fabrique pas de fausse précision.",
+    "- bon_gras : huiles, oléagineux, avocat, poissons gras, œufs entiers.",
+    "Appelle l'outil verdict_repas ; ne réponds pas en texte libre.",
   ].join("\n");
 }

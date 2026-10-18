@@ -43,7 +43,9 @@ export class AnthropicProvider implements LlmProvider {
     content.push({
       type: "text",
       text: [
-        input.mealType ? `Type de repas : ${input.mealType}.` : "",
+        input.mealType ? `Créneau : ${input.mealType}.` : "",
+        input.eatenAtLabel ? `Heure de la prise : ${input.eatenAtLabel}.` : "",
+        input.imageBase64 ? "" : "Pas de photo : estime à partir de la note seule.",
         input.note ? `Note d'Arnaud : ${input.note}` : "",
         "Analyse ce repas puis appelle l'outil verdict_repas avec ton analyse (ne réponds pas en texte libre).",
       ]
@@ -192,10 +194,26 @@ const COACH_TOOL = {
       },
       commentaire: {
         type: "string",
-        description: "2 à 4 phrases en Markdown, tutoiement.",
+        description: "2 à 4 phrases en Markdown, tutoiement (vide pour une collation).",
+      },
+      kcal_min: { type: "integer", description: "Borne basse de l'estimation calorique (kcal)." },
+      kcal_max: { type: "integer", description: "Borne haute de l'estimation calorique (kcal)." },
+      prot_min: { type: "number", description: "Borne basse des protéines (g)." },
+      prot_max: { type: "number", description: "Borne haute des protéines (g)." },
+      categories: {
+        type: "array",
+        items: { type: "string", enum: ["proteines", "legumes", "feculents", "bon_gras", "fruits"] },
+        description: "Catégories présentes en quantité significative.",
+      },
+      hypotheses: {
+        type: "string",
+        description: "Une phrase : hypothèses de l'estimation (portions, huile supposée).",
       },
     },
-    required: ["verdict", "resume", "ajouts", "commentaire"],
+    required: [
+      "verdict", "resume", "ajouts", "commentaire",
+      "kcal_min", "kcal_max", "prot_min", "prot_max", "categories", "hypotheses",
+    ],
   },
 } as const;
 
@@ -217,7 +235,39 @@ export function normalizeReply(
       : [],
     commentaire:
       typeof raw.commentaire === "string" ? raw.commentaire : fallbackText,
+    ...normalizeEstimate(raw),
     model,
+  };
+}
+
+const CATS = ["proteines", "legumes", "feculents", "bon_gras", "fruits"];
+
+function num(v: unknown, max: number): number | null {
+  const n = typeof v === "string" ? Number(v.replace(",", ".")) : v;
+  return typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+}
+
+/** Estimation chiffrée : bornes remises dans l'ordre, valeurs aberrantes
+ *  écartées (un repas au-delà de 5 000 kcal ou 300 g de protéines est
+ *  traité comme une erreur du modèle). */
+export function normalizeEstimate(raw: Record<string, unknown>) {
+  let kMin = num(raw.kcal_min, 5000);
+  let kMax = num(raw.kcal_max, 5000);
+  let pMin = num(raw.prot_min, 300);
+  let pMax = num(raw.prot_max, 300);
+  if (kMin == null || kMax == null) kMin = kMax = kMin ?? kMax;
+  if (pMin == null || pMax == null) pMin = pMax = pMin ?? pMax;
+  if (kMin != null && kMax != null && kMin > kMax) [kMin, kMax] = [kMax, kMin];
+  if (pMin != null && pMax != null && pMin > pMax) [pMin, pMax] = [pMax, pMin];
+  return {
+    kcal_min: kMin == null ? null : Math.round(kMin),
+    kcal_max: kMax == null ? null : Math.round(kMax),
+    prot_min: pMin == null ? null : Math.round(pMin * 10) / 10,
+    prot_max: pMax == null ? null : Math.round(pMax * 10) / 10,
+    categories: Array.isArray(raw.categories)
+      ? [...new Set(raw.categories.filter((c): c is string => typeof c === "string" && CATS.includes(c)))]
+      : [],
+    hypotheses: typeof raw.hypotheses === "string" ? raw.hypotheses : "",
   };
 }
 
@@ -241,6 +291,7 @@ export function parseCoachJson(text: string, model: string): CoachMealReply {
     resume: "Réponse du coach non structurée (voir commentaire).",
     ajouts: [],
     commentaire: text,
+    ...normalizeEstimate({}),
     model,
   };
 }

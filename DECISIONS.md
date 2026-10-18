@@ -64,3 +64,53 @@ Format : date, décision, raison, statut (active / remplacée par X).
     « Accepter » ; l'ancienne version est archivée dans l'historique.
     *Raison : décision n°1, Arnaud reste propriétaire de sa connaissance.*
     **Active.**
+
+## 2026-10-18 : V1.2, nutrition au quotidien
+
+11. **Analyse chiffrée en fourchette, cibles provisoires** (remplace la
+    décision n°8). Pour chaque prise, le coach estime une fourchette de
+    calories et de protéines, et la couverture de cinq catégories
+    (protéines, légumes, féculents, bon gras, fruits), en notant ses
+    hypothèses (huile supposée, portion). Arnaud peut préciser en texte
+    (« 2 càs huile colza ») pour corriger l'estimation. *Raison : le coach
+    raisonnait déjà avec une cible implicite ; l'erreur d'estimation sur
+    photo est en grande partie systématique, donc les tendances restent
+    lisibles, et la courbe de poids sert de juge de paix pour recaler.*
+    **Active.**
+
+12. **Cibles du jour datées et modifiables** (Réglages). Valeurs de départ,
+    provisoires : 3 000 kcal estimées, 115 g de protéines (environ
+    1,8 g/kg), 5 prises ou plus, les cinq catégories couvertes. Chaque
+    changement crée une nouvelle cible datée ; les journées passées gardent
+    la cible en vigueur à leur date. *Raison : calibrer avec la courbe de
+    poids (3 à 4 semaines) et les bilans de fin octobre 2026.* **Active.**
+
+13. **Journée nutritionnelle de 4h à 4h** (heure de Paris). Une collation
+    à 0h30 compte pour la veille. *Raison : coucher tardif d'Arnaud.*
+    **Active.**
+
+14. **Score du jour** sur 100 : énergie 35, protéines 35, qualité 20
+    (4 par catégorie), prises 10. Chaque composante est plafonnée à sa
+    cible. Le score est recalculé à partir des estimations stockées par
+    repas : les valeurs brutes restent la source, réanalysables plus tard.
+    **Active.**
+
+15. **Six créneaux, photo facultative partout.** Petit-déjeuner, collation
+    du matin, déjeuner, goûter, dîner, collation du soir. Saisie possible
+    en texte seul. Heure de prise modifiable (lue dans la photo quand
+    c'est possible). Un repas se modifie, se réanalyse et se supprime.
+    **Active.**
+
+16. **Collations analysées en silence.** Collation du matin, goûter et
+    collation du soir : le coach estime et classe, sans verdict ni
+    commentaire. Elles comptent dans les jauges. *Raison : Arnaud sait
+    quoi prendre, il veut seulement que ce soit compté.* **Active.**
+
+17. **Journal des selles avancé en V1.2** (modifie la décision n°7) :
+    type de Bristol, flottent oui ou non, remarque libre. Transmis au
+    coach. Urines non suivies. *Raison : selles molles et flottantes
+    depuis des années, absorption jamais mesurée ; donnée utile au
+    médecin.* **Active.**
+
+18. **Boissons, café, alcool et tabac non suivis.** Décision d'Arnaud du
+    18/10 : trop de saisie pour la valeur obtenue. **Active.**

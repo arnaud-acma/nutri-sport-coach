@@ -1,19 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-interface StoredFeedback {
-  resume?: string;
-  ajouts?: string[];
-  commentaire?: string;
-}
-
-function parseFeedback(raw: string | null): StoredFeedback {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as StoredFeedback;
-  } catch {
-    return { commentaire: raw };
-  }
-}
+import { dayBounds, dayKey, groupByDay, shiftDay, summarizeDay, targetFor } from "@/lib/journee";
+import {
+  loadMealsBetween,
+  loadStoolsBetween,
+  loadTargets,
+  parseFeedback,
+  rangeLabel,
+} from "@/lib/journee-db";
 
 const fmt = (d: string) =>
   new Date(d).toLocaleString("fr-FR", {
@@ -27,7 +21,7 @@ const fmt = (d: string) =>
 
 /** Résumé texte des données récentes, injecté dans les consignes du coach.
  *  Pour un fil de repas : le repas en détail (note + analyse du coach).
- *  Toujours : les repas des 7 derniers jours (résumés) et les pesées. */
+ *  Toujours : cibles, journées des 7 derniers jours, selles, pesées. */
 export async function buildCoachContext(
   supabase: SupabaseClient,
   mealId: string | null
@@ -39,7 +33,7 @@ export async function buildCoachContext(
   if (mealId) {
     const { data: meal } = await supabase
       .from("meals")
-      .select("eaten_at,meal_type,note,coach_verdict,coach_feedback_md")
+      .select("eaten_at,meal_type,note,coach_verdict,coach_feedback_md,kcal_min,kcal_max,prot_min,prot_max,hypotheses")
       .eq("id", mealId)
       .maybeSingle();
     if (meal) {
@@ -52,30 +46,62 @@ export async function buildCoachContext(
         `Ton analyse initiale : verdict ${meal.coach_verdict ?? "?"}.`,
         fb.resume ? `Ce que tu as vu : ${fb.resume}` : "",
         fb.ajouts?.length ? `Tes ajouts demandés : ${fb.ajouts.join(" ; ")}` : "",
-        fb.commentaire ? `Ton commentaire : ${fb.commentaire}` : ""
+        fb.commentaire ? `Ton commentaire : ${fb.commentaire}` : "",
+        `Ton estimation : ${rangeLabel(meal.kcal_min, meal.kcal_max, "kcal")}, protéines ${rangeLabel(meal.prot_min, meal.prot_max, "g")}.`,
+        meal.hypotheses ? `Tes hypothèses : ${meal.hypotheses}` : ""
       );
     }
   }
 
-  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-  const { data: meals } = await supabase
-    .from("meals")
-    .select("eaten_at,meal_type,note,coach_verdict,coach_feedback_md")
-    .gte("eaten_at", since)
-    .order("eaten_at", { ascending: true })
-    .limit(40);
-  parts.push("", "### Repas des 7 derniers jours");
-  if (meals?.length) {
-    for (const m of meals) {
+  // Journées nutritionnelles (4h à 4h) des 7 derniers jours, avec totaux
+  // estimés, score et détail des prises ; selles sur 14 jours.
+  const today = dayKey(new Date());
+  const first = shiftDay(today, -6);
+  const [targets, meals, stools] = await Promise.all([
+    loadTargets(supabase),
+    loadMealsBetween(supabase, dayBounds(first).start, dayBounds(today).end),
+    loadStoolsBetween(supabase, dayBounds(shiftDay(today, -13)).start, dayBounds(today).end),
+  ]);
+  const t = targetFor(today, targets);
+  parts.push(
+    "",
+    "### Cibles du jour en vigueur (provisoires)",
+    `${t.kcal} kcal estimées, ${t.proteines_g} g de protéines, ${t.prises_min} prises ou plus, 5 catégories (protéines, légumes, féculents, bon gras, fruits). Score du jour sur 100 : énergie 35, protéines 35, qualité 20, prises 10.`,
+    "",
+    "### Journées des 7 derniers jours (estimations en fourchette)"
+  );
+  const byDay = groupByDay(meals);
+  for (let i = 6; i >= 0; i--) {
+    const key = shiftDay(today, -i);
+    const list = byDay.get(key) ?? [];
+    const sum = summarizeDay(list, targetFor(key, targets));
+    parts.push(
+      `- ${key}${key === today ? " (aujourd'hui, en cours)" : ""} : ` +
+        (list.length
+          ? `score ${sum.score}/100, ${sum.kcal.min} à ${sum.kcal.max} kcal, ${sum.prot.min} à ${sum.prot.max} g de protéines, ${sum.prises} prises, catégories : ${sum.categories.join(", ") || "aucune"}`
+          : "rien d'enregistré")
+    );
+    for (const m of list) {
       const fb = parseFeedback(m.coach_feedback_md);
       parts.push(
-        `- ${fmt(m.eaten_at)} · ${m.meal_type ?? "repas"} · ${m.coach_verdict ?? "?"}` +
+        `  - ${fmt(m.eaten_at)} · ${m.meal_type ?? "repas"} · ${rangeLabel(m.kcal_min, m.kcal_max, "kcal")}` +
           (fb.resume ? ` · ${fb.resume}` : "") +
           (m.note ? ` · note : « ${m.note} »` : "")
       );
     }
+  }
+
+  parts.push("", "### Selles des 14 derniers jours (échelle de Bristol)");
+  if (stools.length) {
+    for (const st of stools) {
+      parts.push(
+        `- ${fmt(st.occurred_at)} : type ${st.bristol}` +
+          (st.flottent === true ? ", flottent" : st.flottent === false ? ", coulent" : "") +
+          (st.note ? ` (${st.note})` : "")
+      );
+    }
   } else {
-    parts.push("(aucun repas enregistré)");
+    parts.push("(rien de noté)");
   }
 
   const { data: weights } = await supabase

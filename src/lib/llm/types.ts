@@ -1,7 +1,8 @@
 /** Contrat de l'adaptateur LLM (décision n°4 : indépendance du fournisseur).
  *  Tout nouveau fournisseur implémente cette interface et s'enregistre dans index.ts. */
 
-export type MealVerdict = "valide" | "a_completer" | "simule";
+/** « note » : collation enregistrée et estimée, sans jugement (décision 16). */
+export type MealVerdict = "valide" | "a_completer" | "simule" | "note";
 
 export interface CoachMealReply {
   verdict: MealVerdict;
@@ -11,6 +12,15 @@ export interface CoachMealReply {
   ajouts: string[];
   /** Commentaire libre du coach, en Markdown. */
   commentaire: string;
+  /** Estimation en fourchette (décision 11) ; null si impossible. */
+  kcal_min: number | null;
+  kcal_max: number | null;
+  prot_min: number | null;
+  prot_max: number | null;
+  /** Catégories couvertes : proteines, legumes, feculents, bon_gras, fruits. */
+  categories: string[];
+  /** Hypothèses prises pour l'estimation (huile supposée, portion...). */
+  hypotheses: string;
   /** Modèle réellement utilisé (traçabilité). */
   model: string;
 }
@@ -20,8 +30,10 @@ export interface AnalyzeMealInput {
   systemPrompt: string;
   /** Note de l'utilisateur accompagnant la photo (optionnelle). */
   note?: string;
-  /** Type de repas déclaré (petit-déjeuner, déjeuner, ...). */
+  /** Créneau déclaré (petit-déjeuner, goûter, ...). */
   mealType?: string;
+  /** Heure de la prise, lisible (heure de Paris). */
+  eatenAtLabel?: string;
   /** Photo en base64, sans préfixe data:. */
   imageBase64?: string;
   imageMediaType?: string;

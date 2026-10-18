@@ -1,15 +1,9 @@
 import Markdown from "@/components/Markdown";
 
-export interface MealRow {
-  id: string;
-  eaten_at: string;
-  meal_type: string | null;
-  note: string | null;
-  photo_path: string | null;
-  coach_verdict: string | null;
-  coach_feedback_md: string | null;
-  model_used: string | null;
-}
+import { rangeLabel, type DayMeal } from "@/lib/journee-db";
+import { CATEGORIES } from "@/lib/journee";
+
+export type MealRow = DayMeal;
 
 interface StoredFeedback {
   resume?: string;
@@ -52,7 +46,9 @@ export default function MealCard({
             ? "✅"
             : meal.coach_verdict === "simule"
               ? "🧪"
-              : "➕"}{" "}
+              : meal.coach_verdict === "note"
+                ? "🥜"
+                : "➕"}{" "}
           {meal.meal_type ?? "Repas"} ·{" "}
           {new Date(meal.eaten_at).toLocaleString("fr-FR", {
             timeZone: "Europe/Paris",
@@ -64,6 +60,16 @@ export default function MealCard({
         </p>
         {meal.note && <p className="text-sm text-muted">« {meal.note} »</p>}
         {fb.resume && <p className="text-sm">{fb.resume}</p>}
+        <p className="text-xs tabular-nums">
+          Estimation : {rangeLabel(meal.kcal_min, meal.kcal_max, "kcal")} · protéines{" "}
+          {rangeLabel(meal.prot_min, meal.prot_max, "g")}
+          {meal.categories?.length
+            ? ` · ${meal.categories
+                .map((c) => CATEGORIES.find((x) => x.key === c)?.label.toLowerCase() ?? c)
+                .join(", ")}`
+            : ""}
+        </p>
+        {meal.hypotheses && <p className="text-xs text-muted">Hypothèses : {meal.hypotheses}</p>}
         {fb.ajouts && fb.ajouts.length > 0 && (
           <ul className="list-disc pl-5 text-sm">
             {fb.ajouts.map((a, i) => (

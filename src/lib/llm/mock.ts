@@ -28,6 +28,13 @@ export class MockProvider implements LlmProvider {
         "activer le vrai coach.",
         input.note ? `\n_Ta note a bien été enregistrée : « ${input.note} »_` : "",
       ].join(" "),
+      // Valeurs fictives, pour que les jauges bougent en mode simulé.
+      kcal_min: 450,
+      kcal_max: 650,
+      prot_min: 20,
+      prot_max: 30,
+      categories: ["proteines", "feculents"],
+      hypotheses: "Estimation simulée (mode mock).",
       model: "mock",
     };
   }

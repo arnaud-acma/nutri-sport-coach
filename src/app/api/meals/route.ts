@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getApiUser } from "@/lib/auth";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { loadKnowledge, buildMealSystemPrompt } from "@/lib/coach/prompt";
-import { getProvider } from "@/lib/llm";
+import { analyzeIntake } from "@/lib/coach/analyze";
+import { SLOTS, parseEatenAt } from "@/lib/journee";
 
 export const maxDuration = 60;
 
@@ -18,7 +18,12 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const photo = form.get("photo");
   const note = String(form.get("note") ?? "").slice(0, 2000);
-  const mealType = String(form.get("meal_type") ?? "").slice(0, 40);
+  const rawType = String(form.get("meal_type") ?? "");
+  const mealType = (SLOTS as readonly string[]).includes(rawType) ? rawType : "déjeuner";
+  const eatenAt = parseEatenAt(form.get("eaten_at"));
+  if (!eatenAt) {
+    return NextResponse.json({ error: "Heure de la prise invalide" }, { status: 400 });
+  }
 
   if (!(photo instanceof File) && !note) {
     return NextResponse.json(
@@ -63,43 +68,30 @@ export async function POST(request: Request) {
     }
   }
 
-  // 2. Le coach lit les fiches puis analyse
-  let feedback;
-  try {
-    const pages = await loadKnowledge();
-    const provider = getProvider();
-    feedback = await provider.analyzeMeal({
-      systemPrompt: buildMealSystemPrompt(pages),
-      note,
-      mealType,
-      imageBase64,
-      imageMediaType,
-    });
-  } catch (err) {
-    feedback = {
-      verdict: "a_completer" as const,
-      resume: "Le coach n'a pas pu analyser ce repas (erreur technique).",
-      ajouts: [],
-      commentaire: `Erreur : ${err instanceof Error ? err.message : "inconnue"}. Le repas est tout de même enregistré.`,
-      model: "aucun",
-    };
-  }
+  // 2. Le coach lit les fiches et la journée en cours, puis estime
+  const supabase = await createClient();
+  const { feedback, columns } = await analyzeIntake({
+    supabase,
+    mealType,
+    note,
+    eatenAt,
+    imageBase64,
+    imageMediaType,
+  });
 
   // 3. Enregistrement
-  const supabase = await createClient();
-  const { data: inserted, error: insErr } = await supabase.from("meals").insert({
-    user_id: user.id,
-    meal_type: mealType || null,
-    note: note || null,
-    photo_path: photoPath,
-    coach_verdict: feedback.verdict,
-    coach_feedback_md: JSON.stringify({
-      resume: feedback.resume,
-      ajouts: feedback.ajouts,
-      commentaire: feedback.commentaire,
-    }),
-    model_used: feedback.model,
-  }).select("id").single();
+  const { data: inserted, error: insErr } = await supabase
+    .from("meals")
+    .insert({
+      user_id: user.id,
+      eaten_at: eatenAt.toISOString(),
+      meal_type: mealType,
+      note: note || null,
+      photo_path: photoPath,
+      ...columns,
+    })
+    .select("id")
+    .single();
   if (insErr) {
     return NextResponse.json(
       { error: `Enregistrement : ${insErr.message}` },
@@ -109,3 +101,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ feedback, meal_id: inserted?.id ?? null });
 }
+
