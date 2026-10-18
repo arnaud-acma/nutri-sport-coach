@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
@@ -11,19 +11,37 @@ const TABS = [
   { href: "/reglages", label: "Réglages", icon: "⚙️" },
 ] as const;
 
+/** Icône qui pulse tant que l'onglet touché n'est pas affiché. */
+function TabIcon({ icon }: { icon: string }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span aria-hidden className={`text-lg leading-none ${pending ? "nav-pending" : ""}`}>
+      {icon}
+    </span>
+  );
+}
+
+function isActive(href: string, pathname: string): boolean {
+  if (href === "/") {
+    return pathname === "/" || pathname.startsWith("/repas/nouveau") || pathname.startsWith("/selles");
+  }
+  if (href === "/historique") {
+    return (
+      pathname.startsWith("/historique") ||
+      pathname.startsWith("/jour") ||
+      (pathname.startsWith("/repas") && !pathname.startsWith("/repas/nouveau"))
+    );
+  }
+  return pathname.startsWith(href);
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="fixed bottom-0 inset-x-0 border-t border-border bg-card pb-safe z-10">
       <div className="mx-auto max-w-md grid grid-cols-6">
         {TABS.map((tab) => {
-          const active =
-            tab.href === "/"
-              ? pathname === "/" || pathname.startsWith("/repas/nouveau") || pathname.startsWith("/selles")
-              : tab.href === "/historique"
-                ? pathname.startsWith("/historique") || pathname.startsWith("/jour") ||
-                  (pathname.startsWith("/repas") && !pathname.startsWith("/repas/nouveau"))
-                : pathname.startsWith(tab.href);
+          const active = isActive(tab.href, pathname);
           return (
             <Link
               key={tab.href}
@@ -32,9 +50,7 @@ export default function BottomNav() {
                 active ? "text-accent font-semibold" : "text-muted"
               }`}
             >
-              <span aria-hidden className="text-lg leading-none">
-                {tab.icon}
-              </span>
+              <TabIcon icon={tab.icon} />
               {tab.label}
             </Link>
           );

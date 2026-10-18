@@ -54,3 +54,13 @@ body {
 .prose-coach h1, .prose-coach h2, .prose-coach h3 {
   font-weight: 600; margin: 0.8rem 0 0.3rem;
 }
+
+/* Retour tactile immédiat : un toucher se voit avant la réponse du serveur.
+   touch-action: manipulation supprime l'attente du double-toucher. */
+a, button, label, input, select, textarea { touch-action: manipulation; }
+a, button { -webkit-tap-highlight-color: transparent; transition: opacity 80ms, transform 80ms; }
+a:active, button:active:not(:disabled) { opacity: 0.7; transform: scale(0.98); }
+
+/* Lien d'onglet en cours de chargement */
+.nav-pending { animation: nav-pulse 0.9s ease-in-out infinite; animation-delay: 100ms; }
+@keyframes nav-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
