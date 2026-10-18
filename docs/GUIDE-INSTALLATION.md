@@ -20,11 +20,18 @@ jamais dans un fichier commité, jamais dans une conversation.
 4. Menu SQL Editor > New query : colle TOUT le contenu du fichier
    `supabase/migrations/0001_init.sql` du dépôt > Run. Attendu :
    "Success. No rows returned".
-5. Menu Project Settings > API : note trois valeurs :
-   - Project URL (commence par https://...supabase.co)
-   - clé `anon` (publique)
-   - clé `service_role` (secrète : ne la mets nulle part d'autre que
-     dans les variables Vercel)
+5. Récupère trois valeurs (écran mis à jour par Supabase en 2026) :
+   - Project URL : bouton vert "Connect" en haut, ou simplement
+     `https://<identifiant-du-projet>.supabase.co` (l'identifiant est
+     dans l'adresse du tableau de bord, après /project/).
+   - Settings > API Keys > onglet **"Legacy anon, service_role API
+     keys"** :
+     - clé `anon` (publique)
+     - clé `service_role` (secrète : ne la mets nulle part d'autre que
+       dans les variables Vercel)
+   - Les nouvelles clés `sb_publishable_` / `sb_secret_` du premier
+     onglet devraient aussi fonctionner, mais n'ont pas été testées avec
+     l'appli : utiliser les clés Legacy pour le premier démarrage.
 
 ## Étape 2 : Vercel (hébergement)
 
